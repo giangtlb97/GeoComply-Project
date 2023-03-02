@@ -48,9 +48,7 @@ public class MainViewModel extends ViewModel {
                 getData(listUrl)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(data -> {
-                            listLinkInfo.add(new LinkInfo( data.first, data.second));
-                        }, error -> {
+                        .subscribe(listLinkInfo::add, error -> {
                             isLoading.postValue(false);
                             textCommentError.postValue("Invalid url");
                         }, () -> {
@@ -60,7 +58,7 @@ public class MainViewModel extends ViewModel {
         );
     }
 
-    Observable<Pair<String, String>> getData(List<String> listUrl) {
+    Observable<LinkInfo> getData(List<String> listUrl) {
         return Observable.fromIterable(listUrl)
                 .concatMap(url -> {
                     String absoluteUrl = "";
@@ -71,7 +69,7 @@ public class MainViewModel extends ViewModel {
                     }
                     Document doc = Jsoup.connect(absoluteUrl).get();
                     String title = doc.title();
-                    return Observable.just(new Pair<>(title, absoluteUrl));
+                    return Observable.just(new LinkInfo(title, absoluteUrl));
                 });
     }
 
