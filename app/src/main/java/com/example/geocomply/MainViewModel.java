@@ -1,5 +1,7 @@
 package com.example.geocomply;
 
+import static java.util.stream.Collectors.toList;
+
 import android.util.Pair;
 import android.util.Patterns;
 
@@ -7,6 +9,8 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.example.geocomply.utils.CommentParserUtil;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -14,6 +18,7 @@ import org.jsoup.nodes.Document;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -37,20 +42,20 @@ public class MainViewModel extends ViewModel {
     }
 
     void getTitleLink(List<String> listUrl) {
-        StringBuilder linkInfoBuilder = new StringBuilder();
+        List<LinkInfo> listLinkInfo = new ArrayList<>();
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
         compositeDisposable.add(
                 getData(listUrl)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(data -> {
-                            linkInfoBuilder.append("title: " + data.first + "\n");
-                            linkInfoBuilder.append("url: " + data.second + "\n\n");
+                            listLinkInfo.add(new LinkInfo( data.first, data.second));
                         }, error -> {
                             isLoading.postValue(false);
                             textCommentError.postValue("Invalid url");
                         }, () -> {
                             isLoading.postValue(false);
-                            linkResult.postValue(linkInfoBuilder.toString());
+                            linkResult.postValue(gson.toJson(listLinkInfo));
                         })
         );
     }
@@ -83,12 +88,12 @@ public class MainViewModel extends ViewModel {
             isLoading.setValue(false);
         } else {
             // detect mentions
-            StringBuilder mentionsResult = new StringBuilder();
-
+            List<String> mentionsResult = new ArrayList<>();
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
             mentionsList = CommentParserUtil.extractByPattern(textComment.getValue(), mentionPattern);
             if (!mentionsList.isEmpty()) {
-                mentionsList.forEach(e -> mentionsResult.append(e.replace("@", "") + "\n"));
-                mentions.setValue(mentionsResult.toString());
+                mentionsResult = mentionsList.stream().map(o -> o.replace("@", "")).collect(toList());
+                mentions.setValue(gson.toJson(mentionsResult));
             } else {
                 mentions.setValue("No mention");
             }
